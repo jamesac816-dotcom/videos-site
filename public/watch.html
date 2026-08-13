@@ -406,6 +406,7 @@
   </footer>
 
   <script src="/js/purchase-toasts.js"></script>
+  <script src="/js/usd-zar.js"></script>
   <script src="/js/privacy-checkout.js"></script>
   <script src="/js/storefront.js"></script>
   <script>
@@ -419,18 +420,16 @@
       }
 
       function checkoutOrigin() {
+        if (LOCAL_CHECKOUT) return window.location.origin;
         var ebooks = ebooksCheckoutOrigin();
         if (ebooks) return ebooks;
-        if (LOCAL_CHECKOUT) return window.location.origin;
         return '';
       }
       function checkoutMethod() {
-        if (ebooksCheckoutOrigin()) return 'whop';
-        return LOCAL_CHECKOUT ? 'payjsr' : 'whop';
+        return LOCAL_CHECKOUT ? 'payjsr' : (ebooksCheckoutOrigin() ? 'whop' : 'payjsr');
       }
       function checkoutApiPath() {
-        if (ebooksCheckoutOrigin()) return '/api/paypal-checkout';
-        return LOCAL_CHECKOUT ? '/api/payjsr-checkout' : '/api/paypal-checkout';
+        return LOCAL_CHECKOUT ? '/api/payjsr-checkout' : (ebooksCheckoutOrigin() ? '/api/paypal-checkout' : '/api/payjsr-checkout');
       }
       var MASKED_PRODUCT_NAME = 'Digital Ebook';
       function pickMaskedName(custom) {
@@ -563,9 +562,10 @@
         var tgCheckout = (tgUser || TG_ENV || '').replace(/^@/, '').trim();
         if (tgCheckout) p2.set('telegram_username', tgCheckout);
         var apiPath = checkoutApiPath();
-        var cancelP = new URLSearchParams(p2.toString());
-        cancelP.set('payment_canceled', 'true');
-        p2.set('cancel_url', origin + apiPath + '?' + cancelP.toString());
+        var cancelBack = videoId
+          ? '/watch?id=' + encodeURIComponent(String(videoId)) + '&payment_canceled=true'
+          : '/?payment_canceled=true';
+        p2.set('cancel_url', origin + cancelBack);
         return origin + apiPath + '?' + p2.toString();
       }
       function tgUrlForVideo(v) {
@@ -580,16 +580,16 @@
             maskedName,
             displayTitle || 'Digital purchase',
             videoId,
-            ebooksCheckoutOrigin() ? 'whop' : undefined
+            'payjsr'
           );
           if (!url) {
-            alert('Checkout is not configured. Set EBOOKS_SITE_URL.');
+            alert('Checkout is not configured. Enable LOCAL_PAYJSR_CHECKOUT and PAYJSR_PAYMENT_LINKS.');
             return;
           }
           window.location.href = url;
         }
         if (typeof PrivacyCheckout !== 'undefined') {
-          PrivacyCheckout.open(go, { maskedName: masked });
+          PrivacyCheckout.open(go, { maskedName: masked, priceUsd: price });
           return;
         }
         go();
@@ -631,7 +631,8 @@
           return;
         }
         document.getElementById('v-price').innerHTML =
-          '$' + Number(v.price).toFixed(2) + '<small>USD</small>';
+          '$' + Number(v.price).toFixed(2) + '<small>USD</small> <span class="zar-eq" data-usd="' + Number(v.price) + '"></span>';
+        if (typeof UsdZar !== 'undefined') UsdZar.refresh(document.getElementById('pay-panel'));
         document.getElementById('btn-contact-tg').href = tgUrlForVideo(v);
         var payBtn = document.getElementById('btn-pay-instant');
         if (payBtn) {
@@ -665,7 +666,7 @@
       async function boot() {
         parseUrlParams();
         EBOOKS_ORIGIN = normalizeOrigin(EBOOKS_ORIGIN || '');
-        if (!checkoutOrigin()) setErr('Set EBOOKS_SITE_URL.');
+        if (!checkoutOrigin()) setErr('Enable LOCAL_PAYJSR_CHECKOUT and PAYJSR_PAYMENT_LINKS for checkout.');
         try {
           var br = await fetch('/api/site-brief').then(function (r) { return r.json(); });
           if (br.telegram_username) tgUser = br.telegram_username.replace(/^@/, '');

@@ -20,9 +20,8 @@ const ebooksEnv =
   process.env.VITE_PAYMENT_URL ||
   '';
 const EBOOKS_SITE_URL = String(ebooksEnv || '').replace(/\/+$/, '');
-/** PayJSR on this host only when ebooks mask is off and explicitly enabled. */
+/** PayJSR on this host when enabled and links are configured (no ebooks/Whop hop). */
 const LOCAL_CHECKOUT =
-  !EBOOKS_SITE_URL &&
   String(process.env.LOCAL_PAYJSR_CHECKOUT || '0').trim() !== '0' &&
   Boolean(String(process.env.PAYJSR_PAYMENT_LINKS || '').trim());
 

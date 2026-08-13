@@ -22,13 +22,21 @@
     return origin + '/?' + p.toString();
   }
 
-  function checkoutMethodForOrigin(ebooksOrigin) {
+  function checkoutMethodForOrigin(ebooksOrigin, localCheckout) {
+    if (localCheckout) return 'payjsr';
     var origin = normalizeOrigin(String(ebooksOrigin || '').trim().replace(/\/+$/, ''));
     return origin ? 'whop' : 'payjsr';
   }
 
-  function checkoutQuery(ebooksOrigin, price, maskedName, displayTitle, videoId, method, extra) {
+  function checkoutApiPath(ebooksOrigin, localCheckout) {
+    if (localCheckout) return '/api/payjsr-checkout';
     var origin = normalizeOrigin(String(ebooksOrigin || '').trim().replace(/\/+$/, ''));
+    return origin ? '/api/paypal-checkout' : '/api/payjsr-checkout';
+  }
+
+  function checkoutQuery(ebooksOrigin, price, maskedName, displayTitle, videoId, method, extra, localCheckout) {
+    var origin = normalizeOrigin(String(ebooksOrigin || '').trim().replace(/\/+$/, ''));
+    if (localCheckout) origin = typeof window !== 'undefined' ? window.location.origin : origin;
     if (!origin) return null;
     var vid = videoId || '';
     var title = displayTitle || 'Digital purchase';
@@ -41,7 +49,7 @@
     p.set('success_url', successUrl);
     p.set('product_name', masked);
     p.set('display_title', title);
-    p.set('method', method || checkoutMethodForOrigin(origin));
+    p.set('method', method || checkoutMethodForOrigin(origin, localCheckout));
     if (vid) p.set('video_id', vid);
     if (extra) {
       Object.keys(extra).forEach(function (k) {
@@ -51,18 +59,20 @@
     return p;
   }
 
-  function checkoutCancelUrl(origin, checkoutParams) {
+  function checkoutCancelUrl(origin, checkoutParams, apiPath) {
     var cancelP = new URLSearchParams(checkoutParams.toString());
     cancelP.set('payment_canceled', 'true');
-    return origin + '/api/paypal-checkout?' + cancelP.toString();
+    return origin + (apiPath || '/api/payjsr-checkout') + '?' + cancelP.toString();
   }
 
-  function checkoutUrl(ebooksOrigin, price, maskedName, displayTitle, videoId, method) {
+  function checkoutUrl(ebooksOrigin, price, maskedName, displayTitle, videoId, method, localCheckout) {
     var origin = normalizeOrigin(String(ebooksOrigin || '').trim().replace(/\/+$/, ''));
-    var p = checkoutQuery(ebooksOrigin, price, maskedName, displayTitle, videoId, method);
+    if (localCheckout && typeof window !== 'undefined') origin = window.location.origin;
+    var apiPath = checkoutApiPath(ebooksOrigin, localCheckout);
+    var p = checkoutQuery(ebooksOrigin, price, maskedName, displayTitle, videoId, method, null, localCheckout);
     if (!p || !origin) return null;
-    p.set('cancel_url', checkoutCancelUrl(origin, p));
-    return origin + '/api/paypal-checkout?' + p.toString();
+    p.set('cancel_url', checkoutCancelUrl(origin, p, apiPath));
+    return origin + apiPath + '?' + p.toString();
   }
 
   function watchUrl(videoId, preview) {

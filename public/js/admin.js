@@ -6,7 +6,7 @@ const state = {
   videos: [],
   editingId: null,
   pendingVideoFile: null,
-  pendingThumbFile: null,
+  pendingVideoPreviewUrl: null,
   cryptoWallets: [],
 };
 
@@ -57,13 +57,6 @@ const UPLOAD_UI = {
     fill: () => $('#upload-video-fill'),
     pct: () => $('#upload-video-pct'),
   },
-  thumbnail: {
-    block: () => $('#upload-thumb-block'),
-    status: () => $('#upload-thumb-status'),
-    progress: () => $('#upload-thumb-progress'),
-    fill: () => $('#upload-thumb-fill'),
-    pct: () => $('#upload-thumb-pct'),
-  },
 };
 
 function resetUploadProgress(kind) {
@@ -109,6 +102,39 @@ function setSaveOverlay(showOverlay, pct = 0, msg = '') {
     hide(overlay);
     if (fill) fill.style.width = '0%';
     if (pctEl) pctEl.textContent = '0%';
+  }
+}
+
+function posterAtFromForm() {
+  const n = Number($('#field-poster_at')?.value);
+  return Number.isFinite(n) && n >= 0 ? n : 1;
+}
+
+function revokePendingPreview() {
+  if (state.pendingVideoPreviewUrl) {
+    URL.revokeObjectURL(state.pendingVideoPreviewUrl);
+    state.pendingVideoPreviewUrl = null;
+  }
+}
+
+async function updateVideoPreview(url, atSec) {
+  const wrap = $('#video-preview-wrap');
+  const inner = $('#video-preview-inner');
+  if (!wrap || !inner) return;
+  if (!url) {
+    hide(wrap);
+    inner.innerHTML = '';
+    return;
+  }
+  show(wrap);
+  inner.innerHTML = '<video class="video-preview" muted playsinline preload="metadata" aria-hidden="true"></video>';
+  const container = inner;
+  try {
+    if (typeof Storefront !== 'undefined') {
+      await Storefront.applyVideoPoster(container, url, atSec);
+    }
+  } catch {
+    hide(wrap);
   }
 }
 
@@ -340,7 +366,7 @@ function renderVideoTable() {
       const price = v.is_free ? 'Grátis' : `$${formatPrice(v.price)}`;
       const dur = v.duration ? `<span class="muted" style="font-size:0.75rem;display:block">${escapeHtml(v.duration)}</span>` : '';
       return `<tr data-id="${v.id}">
-        <td class="thumb-cell"><div class="thumb-placeholder">…</div><img class="thumb-img" alt="" hidden></td>
+        <td class="thumb-cell"><div class="thumb-placeholder">…</div><div class="thumb-vid-wrap" hidden></div></td>
         <td><strong>${escapeHtml(v.title)}</strong>${dur}</td>
         <td>${price}</td>
         <td>${v.views ?? 0}</td>
@@ -366,38 +392,28 @@ function renderVideoTable() {
 }
 
 async function loadTableThumbs() {
+  if (typeof Storefront === 'undefined') return;
+
   for (const row of $$('#videos-tbody tr[data-id]')) {
     const v = state.videos.find((x) => x.id === row.dataset.id);
     if (!v) continue;
 
-    const img = row.querySelector('.thumb-img');
     const ph = row.querySelector('.thumb-placeholder');
-    let url = '';
+    const wrap = row.querySelector('.thumb-vid-wrap');
+    if (!wrap) continue;
 
-    if (v.thumbnail_url && /^https?:\/\//i.test(String(v.thumbnail_url).trim())) {
-      url = String(v.thumbnail_url).trim();
-    } else if (v.wasabi_thumb_key) {
-      try {
-        const r = await fetch('/api/signed-url?key=' + encodeURIComponent(v.wasabi_thumb_key));
-        const d = await r.json();
-        if (d.url) url = d.url;
-      } catch {
-        /* ignore */
-      }
-    }
-
-    if (url && img) {
-      img.onload = () => {
-        img.hidden = false;
+    const ok = await Storefront.hydrateVideoPoster(v, wrap, {
+      onReady: () => {
+        wrap.hidden = false;
+        wrap.querySelector('video')?.classList.add('thumb-vid');
         if (ph) ph.hidden = true;
-      };
-      img.onerror = () => {
+      },
+      onError: () => {
         if (ph) ph.textContent = '—';
-      };
-      img.src = url;
-    } else if (ph) {
-      ph.textContent = '—';
-    }
+      },
+    });
+
+    if (!ok && ph) ph.textContent = '—';
   }
 }
 
@@ -412,17 +428,16 @@ function escapeHtml(s) {
 function resetForm() {
   state.editingId = null;
   state.pendingVideoFile = null;
-  state.pendingThumbFile = null;
+  revokePendingPreview();
   $('#video-form').reset();
   $('#field-id').value = '';
   $('#field-is_active').checked = true;
   $('#field-is_free').checked = false;
+  $('#field-poster_at').value = '1';
   $('#upload-video-status').textContent = '';
-  $('#upload-thumb-status').textContent = '';
   resetUploadProgress('video');
-  resetUploadProgress('thumbnail');
   $('#field-video_file_id').value = '';
-  $('#field-thumbnail_file_id').value = '';
+  updateVideoPreview(null);
   $('#editor-title').textContent = 'Novo vídeo';
 }
 
@@ -432,7 +447,7 @@ function openEditor(id) {
 
   state.editingId = id;
   state.pendingVideoFile = null;
-  state.pendingThumbFile = null;
+  revokePendingPreview();
   $('#editor-title').textContent = 'Editar vídeo';
   $('#field-id').value = v.id;
   $('#field-title').value = v.title || '';
@@ -440,14 +455,21 @@ function openEditor(id) {
   $('#field-price').value = v.price ?? 0;
   $('#field-duration').value = v.duration || '';
   $('#field-sort_order').value = v.sort_order ?? 0;
+  $('#field-poster_at').value = v.poster_at ?? 1;
   $('#field-product_link').value = v.product_link || '';
   $('#field-video_file_id').value = v.video_file_id || '';
-  $('#field-thumbnail_file_id').value = v.thumbnail_file_id || '';
   $('#field-is_active').checked = v.is_active !== false;
   $('#field-is_free').checked = v.is_free === true;
   $('#upload-video-status').textContent = v.video_file_id ? `Atual: ${v.video_file_id}` : '';
-  $('#upload-thumb-status').textContent = v.thumbnail_file_id ? `Atual: ${v.thumbnail_file_id}` : '';
   show($('#editor-panel'));
+
+  if (typeof Storefront !== 'undefined' && (v.wasabi_video_key || v.public_video_url)) {
+    Storefront.resolvePlaybackUrl(v).then((url) => {
+      if (url) updateVideoPreview(url, v.poster_at ?? 1);
+    });
+  } else {
+    updateVideoPreview(null);
+  }
 }
 
 function closeEditor() {
@@ -455,13 +477,12 @@ function closeEditor() {
   resetForm();
 }
 
-async function uploadFile(file, kind, videoId, onProgress) {
+async function uploadFile(file, videoId, onProgress) {
   const { uploadUrl, key } = await api('/api/admin/upload/presign', {
     method: 'POST',
     body: JSON.stringify({
       filename: file.name,
       contentType: file.type || 'application/octet-stream',
-      kind,
       videoId,
     }),
   });
@@ -497,14 +518,14 @@ async function uploadFile(file, kind, videoId, onProgress) {
   });
 }
 
-async function handleFilePick(input, kind) {
+async function handleFilePick(input) {
   const file = input.files?.[0];
   if (!file) return;
-  if (kind === 'video') state.pendingVideoFile = file;
-  else state.pendingThumbFile = file;
-
-  const statusEl = kind === 'video' ? $('#upload-video-status') : $('#upload-thumb-status');
-  statusEl.textContent = `Selecionado: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`;
+  state.pendingVideoFile = file;
+  revokePendingPreview();
+  state.pendingVideoPreviewUrl = URL.createObjectURL(file);
+  $('#upload-video-status').textContent = `Selecionado: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`;
+  await updateVideoPreview(state.pendingVideoPreviewUrl, posterAtFromForm());
 }
 
 async function handleSave(e) {
@@ -515,8 +536,7 @@ async function handleSave(e) {
   if (closeBtn) closeBtn.disabled = true;
 
   const hasVideo = !!state.pendingVideoFile;
-  const hasThumb = !!state.pendingThumbFile;
-  const steps = 1 + (hasVideo ? 1 : 0) + (hasThumb ? 1 : 0);
+  const steps = 1 + (hasVideo ? 1 : 0);
 
   function overallPct(stepIndex, filePct = 0) {
     const base = (stepIndex / steps) * 100;
@@ -531,11 +551,11 @@ async function handleSave(e) {
       price: Number($('#field-price').value) || 0,
       duration: $('#field-duration').value.trim(),
       sort_order: Number($('#field-sort_order').value) || 0,
+      poster_at: posterAtFromForm(),
       product_link: $('#field-product_link').value.trim() || null,
       is_active: $('#field-is_active').checked,
       is_free: $('#field-is_free').checked,
       video_file_id: $('#field-video_file_id').value.trim() || null,
-      thumbnail_file_id: $('#field-thumbnail_file_id').value.trim() || null,
     };
 
     if (!payload.title) {
@@ -563,7 +583,7 @@ async function handleSave(e) {
     if (state.pendingVideoFile) {
       const file = state.pendingVideoFile;
       setUploadProgress('video', 0, `A preparar: ${file.name} (${formatBytes(file.size)})`);
-      const key = await uploadFile(file, 'video', videoId, (pct, label, done) => {
+      const key = await uploadFile(file, videoId, (pct, label, done) => {
         setUploadProgress('video', pct, label, done);
         setSaveOverlay(true, overallPct(step, pct), label || 'A enviar vídeo…');
       });
@@ -574,28 +594,6 @@ async function handleSave(e) {
       $('#field-video_file_id').value = key;
       state.pendingVideoFile = null;
       setUploadProgress('video', 100, `Enviado: ${file.name}`, true);
-      step += 1;
-      setSaveOverlay(
-        true,
-        overallPct(step),
-        hasThumb ? 'Vídeo enviado — a enviar thumbnail…' : 'A concluir…'
-      );
-    }
-
-    if (state.pendingThumbFile) {
-      const file = state.pendingThumbFile;
-      setUploadProgress('thumbnail', 0, `A preparar: ${file.name} (${formatBytes(file.size)})`);
-      const key = await uploadFile(file, 'thumbnail', videoId, (pct, label, done) => {
-        setUploadProgress('thumbnail', pct, label, done);
-        setSaveOverlay(true, overallPct(step, pct), label || 'A enviar thumbnail…');
-      });
-      await api(`/api/admin/videos/${videoId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ thumbnail_file_id: key }),
-      });
-      $('#field-thumbnail_file_id').value = key;
-      state.pendingThumbFile = null;
-      setUploadProgress('thumbnail', 100, `Enviado: ${file.name}`, true);
       step += 1;
     }
 
@@ -638,8 +636,19 @@ function init() {
   $('#add-crypto-btn').addEventListener('click', addCryptoRow);
   $('#save-crypto-btn').addEventListener('click', saveCrypto);
   $('#save-account-btn').addEventListener('click', saveAccount);
-  $('#pick-video').addEventListener('change', (e) => handleFilePick(e.target, 'video'));
-  $('#pick-thumb').addEventListener('change', (e) => handleFilePick(e.target, 'thumbnail'));
+  $('#pick-video').addEventListener('change', (e) => handleFilePick(e.target));
+  $('#field-poster_at')?.addEventListener('change', async () => {
+    const at = posterAtFromForm();
+    if (state.pendingVideoPreviewUrl) {
+      await updateVideoPreview(state.pendingVideoPreviewUrl, at);
+      return;
+    }
+    const v = state.videos.find((x) => x.id === state.editingId);
+    if (v && typeof Storefront !== 'undefined') {
+      const url = await Storefront.resolvePlaybackUrl(v);
+      if (url) updateVideoPreview(url, at);
+    }
+  });
 
   checkAuth().then((ok) => {
     if (ok) {

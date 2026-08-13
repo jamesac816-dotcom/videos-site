@@ -203,10 +203,9 @@ function enrichVideoRow(row) {
   const primarySource = sortedSources[0];
 
   const vk = row.video_file_id || primarySource?.source_file_id || null;
-  const tk = row.thumbnail_file_id || primarySource?.thumbnail_file_id || null;
-
   const wasabi_video_key = vk ? String(vk).trim() : null;
-  const wasabi_thumb_key = tk ? String(tk).trim() : null;
+  const posterAt = Number(row.poster_at);
+  const poster_at = Number.isFinite(posterAt) && posterAt >= 0 ? posterAt : 1;
 
   return {
     ...row,
@@ -216,10 +215,8 @@ function enrichVideoRow(row) {
       row.public_video_url && isHttpUrl(row.public_video_url)
         ? String(row.public_video_url).trim()
         : '',
-    poster_url:
-      row.thumbnail_url && isHttpUrl(row.thumbnail_url) ? String(row.thumbnail_url).trim() : '',
     wasabi_video_key,
-    wasabi_thumb_key,
+    poster_at,
   };
 }
 
@@ -303,10 +300,9 @@ function sanitizeFilename(name) {
     .slice(0, 120) || 'file';
 }
 
-function buildUploadKey(kind, videoId, filename) {
-  const folder = kind === 'thumbnail' ? 'thumbnails' : 'videos';
+function buildUploadKey(videoId, filename) {
   const id = videoId || crypto.randomUUID();
-  return `${folder}/${id}/${Date.now()}_${sanitizeFilename(filename)}`;
+  return `videos/${id}/${Date.now()}_${sanitizeFilename(filename)}`;
 }
 
 const VIDEO_EDIT_FIELDS = [
@@ -315,9 +311,8 @@ const VIDEO_EDIT_FIELDS = [
   'price',
   'duration',
   'video_file_id',
-  'thumbnail_file_id',
-  'thumbnail_url',
   'public_video_url',
+  'poster_at',
   'product_link',
   'is_active',
   'is_free',
@@ -331,6 +326,10 @@ function pickVideoFields(body) {
   }
   if (out.price != null) out.price = Number(out.price) || 0;
   if (out.sort_order != null) out.sort_order = Number(out.sort_order) || 0;
+  if (out.poster_at != null) {
+    const n = Number(out.poster_at);
+    out.poster_at = Number.isFinite(n) && n >= 0 ? n : 1;
+  }
   if (typeof out.is_active === 'string') out.is_active = out.is_active === 'true';
   if (typeof out.is_free === 'string') out.is_free = out.is_free === 'true';
   return out;
@@ -1012,9 +1011,8 @@ app.post('/api/admin/videos', requireAdmin, async (req, res) => {
       price: fields.price ?? 0,
       duration: fields.duration ?? '',
       video_file_id: fields.video_file_id ?? null,
-      thumbnail_file_id: fields.thumbnail_file_id ?? null,
-      thumbnail_url: fields.thumbnail_url ?? null,
       public_video_url: fields.public_video_url ?? null,
+      poster_at: fields.poster_at ?? 1,
       product_link: fields.product_link ?? null,
       is_active: fields.is_active ?? true,
       is_free: fields.is_free ?? false,
@@ -1078,10 +1076,9 @@ app.post('/api/admin/upload/presign', requireAdmin, async (req, res) => {
   try {
     const filename = String(req.body?.filename || 'file');
     const contentType = String(req.body?.contentType || 'application/octet-stream');
-    const kind = req.body?.kind === 'thumbnail' ? 'thumbnail' : 'video';
     const videoId = req.body?.videoId ? String(req.body.videoId) : null;
 
-    const key = buildUploadKey(kind, videoId, filename);
+    const key = buildUploadKey(videoId, filename);
     const { cfg, client } = await signingClientAndBucket();
 
     if (!client || !cfg.signingReady) {

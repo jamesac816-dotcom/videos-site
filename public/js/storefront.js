@@ -131,12 +131,85 @@
 
   function escapeAttr(s) { return escapeHtml(s).replace(/'/g, '&#39;'); }
 
+  var DEFAULT_POSTER_AT = 1;
+
   async function fetchSigned(fileKey) {
     if (!fileKey) return null;
     var r = await fetch('/api/signed-url?key=' + encodeURIComponent(String(fileKey).trim()));
     if (!r.ok) return null;
     var j = await r.json();
     return j.success && j.url ? j.url : null;
+  }
+
+  function posterAtSeconds(v) {
+    var n = Number(v && v.poster_at);
+    return Number.isFinite(n) && n >= 0 ? n : DEFAULT_POSTER_AT;
+  }
+
+  function applyVideoPoster(container, url, atSec) {
+    return new Promise(function (resolve, reject) {
+      if (!container || !url) {
+        reject(new Error('missing'));
+        return;
+      }
+      var video = container.querySelector('video');
+      if (!video) {
+        video = document.createElement('video');
+        video.muted = true;
+        video.playsInline = true;
+        video.setAttribute('playsinline', '');
+        video.setAttribute('muted', '');
+        video.preload = 'metadata';
+        video.setAttribute('aria-hidden', 'true');
+        container.appendChild(video);
+      }
+      var settled = false;
+      function finish(ok) {
+        if (settled) return;
+        settled = true;
+        if (ok) {
+          video.style.display = 'block';
+          resolve(video);
+        } else {
+          reject(new Error('poster'));
+        }
+      }
+      video.onerror = function () { finish(false); };
+      video.onseeked = function () {
+        try { video.pause(); } catch (e) { /* ignore */ }
+        finish(true);
+      };
+      video.onloadedmetadata = function () {
+        var dur = video.duration;
+        var t = Number(atSec);
+        if (!Number.isFinite(t) || t < 0) t = DEFAULT_POSTER_AT;
+        if (Number.isFinite(dur) && dur > 0) {
+          t = Math.min(t, Math.max(0, dur - 0.05));
+        }
+        try {
+          video.currentTime = t;
+        } catch (e) {
+          finish(false);
+        }
+      };
+      video.src = url;
+      video.load();
+    });
+  }
+
+  async function hydrateVideoPoster(v, container, opts) {
+    opts = opts || {};
+    var url = opts.url || (await resolvePlaybackUrl(v));
+    if (!url || !container) return null;
+    var at = opts.at != null ? opts.at : posterAtSeconds(v);
+    try {
+      var el = await applyVideoPoster(container, url, at);
+      if (opts.onReady) opts.onReady(el);
+      return el;
+    } catch (e) {
+      if (opts.onError) opts.onError(e);
+      return null;
+    }
   }
 
   function tgUrlForVideo(v, tgUser) {
@@ -241,6 +314,10 @@
     tgUrlCryptoProof: tgUrlCryptoProof,
     tgUrlPaymentSuccess: tgUrlPaymentSuccess,
     copyToClipboard: copyToClipboard,
-    resolvePlaybackUrl: resolvePlaybackUrl
+    resolvePlaybackUrl: resolvePlaybackUrl,
+    DEFAULT_POSTER_AT: DEFAULT_POSTER_AT,
+    posterAtSeconds: posterAtSeconds,
+    applyVideoPoster: applyVideoPoster,
+    hydrateVideoPoster: hydrateVideoPoster
   };
 })(typeof window !== 'undefined' ? window : this);

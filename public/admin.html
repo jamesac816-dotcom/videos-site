@@ -125,9 +125,13 @@
     .error-text { color: var(--danger); }
     .actions-cell { display: flex; gap: 0.35rem; flex-wrap: wrap; }
     .thumb-cell { width: 72px; padding: 0.5rem !important; }
-    .thumb-img {
+    .thumb-img, .thumb-vid {
       width: 56px; height: 36px; object-fit: cover; border-radius: 6px;
       background: var(--surface-2); display: block;
+    }
+    .thumb-vid-wrap {
+      width: 56px; height: 36px; border-radius: 6px; overflow: hidden;
+      background: var(--surface-2);
     }
     .thumb-placeholder {
       width: 56px; height: 36px; border-radius: 6px; background: var(--surface-2);
@@ -161,6 +165,14 @@
       padding: 0.85rem; margin-bottom: 1rem; background: var(--surface);
     }
     .upload-block label { font-size: 0.78rem; font-weight: 600; color: var(--muted); display: block; margin-bottom: 0.4rem; }
+    .upload-hint { font-size: 0.72rem; color: var(--muted); margin: 0 0 0.5rem; line-height: 1.4; }
+    .video-preview-wrap {
+      margin-top: 0.65rem; border-radius: 8px; overflow: hidden;
+      background: var(--surface-2); max-width: 280px;
+    }
+    .video-preview-wrap video {
+      width: 100%; display: block; aspect-ratio: 16 / 9; object-fit: cover;
+    }
     .upload-status { font-size: 0.75rem; color: var(--muted); margin-top: 0.35rem; word-break: break-all; }
     .upload-progress {
       display: flex; align-items: center; gap: 0.65rem;
@@ -343,6 +355,13 @@
             <label for="field-sort_order">Ordem na loja</label>
             <input type="number" id="field-sort_order" value="0">
           </div>
+          <div class="field">
+            <label for="field-poster_at">Thumbnail (segundo do vídeo)</label>
+            <input type="number" id="field-poster_at" min="0" step="0.1" value="1">
+          </div>
+        </div>
+
+        <div class="field-row">
           <div class="field field-check" style="align-self:end;padding-bottom:0.6rem">
             <input type="checkbox" id="field-is_active" checked>
             <label for="field-is_active">Ativo na loja</label>
@@ -356,6 +375,7 @@
 
         <div class="upload-block" id="upload-video-block">
           <label>Ficheiro de vídeo (Wasabi)</label>
+          <p class="upload-hint">A thumbnail é gerada automaticamente a partir do vídeo no segundo indicado acima.</p>
           <input type="file" id="pick-video" accept="video/*">
           <input type="hidden" id="field-video_file_id">
           <p class="upload-status" id="upload-video-status"></p>
@@ -363,16 +383,8 @@
             <div class="upload-progress-bar"><div class="upload-progress-fill" id="upload-video-fill"></div></div>
             <span class="upload-progress-pct" id="upload-video-pct">0%</span>
           </div>
-        </div>
-
-        <div class="upload-block" id="upload-thumb-block">
-          <label>Thumbnail (Wasabi)</label>
-          <input type="file" id="pick-thumb" accept="image/*">
-          <input type="hidden" id="field-thumbnail_file_id">
-          <p class="upload-status" id="upload-thumb-status"></p>
-          <div class="upload-progress" id="upload-thumb-progress" hidden>
-            <div class="upload-progress-bar"><div class="upload-progress-fill" id="upload-thumb-fill"></div></div>
-            <span class="upload-progress-pct" id="upload-thumb-pct">0%</span>
+          <div id="video-preview-wrap" class="video-preview-wrap" hidden>
+            <div id="video-preview-inner"></div>
           </div>
         </div>
 
@@ -399,6 +411,7 @@
 
   <div id="toast" class="toast" hidden></div>
 
+  <script src="/js/storefront.js"></script>
   <script src="/js/admin.js"></script>
 </body>
 </html>

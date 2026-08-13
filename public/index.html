@@ -584,6 +584,7 @@
 
   <script src="/js/purchase-toasts.js"></script>
   <script src="/js/privacy-checkout.js"></script>
+  <script src="/js/storefront.js"></script>
   <script>
     (function () {
       var EBOOKS_ORIGIN = '{{EBOOKS_SITE_URL}}';
@@ -964,16 +965,12 @@
           var badgeTop = isFree
             ? '<span class="badge-price">Free</span>'
             : '<span class="badge-price"><em>$</em>' + price.toFixed(2) + '</span>';
-          var httpPoster = '';
-          if (v.thumbnail_url && /^https?:\/\//i.test(String(v.thumbnail_url).trim())) {
-            httpPoster = String(v.thumbnail_url).trim();
-          }
 
           el.innerHTML =
             '<div class="vcard-media">' +
               '<div class="vcard-media-inner js-inner">' +
                 '<div class="skel js-skel"></div>' +
-                '<img class="js-thumb" alt="" style="display:none" />' +
+                '<video class="js-thumb" muted playsinline preload="metadata" aria-hidden="true" style="display:none"></video>' +
                 '<div class="grad-over"></div>' +
                 '<a class="preview-hit" href="' + escapeAttr(previewHref) + '"><div class="play-circ"><div class="play-tri"></div></div><span class="tap-play">Tap to play</span></a>' +
                 badgeTop +
@@ -1005,8 +1002,6 @@
                 : '') +
             '</div>';
 
-          el.dataset.httpPoster = httpPoster;
-          el.dataset.thumbKey = v.wasabi_thumb_key || '';
           el.setAttribute('aria-label', (v.title || 'Catalog item') + (isFree ? ', free' : ', ' + price.toFixed(2) + ' USD'));
 
           el.querySelector('.js-details') && el.querySelector('.js-details').addEventListener('click', function (e) {
@@ -1040,25 +1035,16 @@
       function hydrateThumbs() {
         document.querySelectorAll('.vcard:not(.ph-card)').forEach(function (card) {
           var skel = card.querySelector('.js-skel');
-          var img = card.querySelector('.js-thumb');
-          var http = card.dataset.httpPoster;
-          function trySignedThumb() {
-            var k = card.dataset.thumbKey;
-            if (!k) { skel.style.display = 'none'; return; }
-            fetchSigned(k).then(function (u) {
-              if (!u) { skel.style.display = 'none'; return; }
-              img.onload = function () { skel.style.display = 'none'; img.style.display = 'block'; };
-              img.onerror = function () { skel.style.display = 'none'; };
-              img.src = u;
-            });
-          }
-          if (http) {
-            img.onload = function () { skel.style.display = 'none'; img.style.display = 'block'; };
-            img.onerror = function () { trySignedThumb(); };
-            img.src = http;
+          var v = allVideos.find(function (x) { return x.id === card.dataset.id; });
+          if (!v || typeof Storefront === 'undefined') {
+            if (skel) skel.style.display = 'none';
             return;
           }
-          trySignedThumb();
+          var inner = card.querySelector('.js-inner');
+          Storefront.hydrateVideoPoster(v, inner, {
+            onReady: function () { if (skel) skel.style.display = 'none'; },
+            onError: function () { if (skel) skel.style.display = 'none'; }
+          });
         });
       }
 

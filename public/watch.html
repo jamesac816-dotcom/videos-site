@@ -272,9 +272,12 @@
       position: relative; width: 100%; padding-top: 56.25%;
       background: var(--surface); overflow: hidden;
     }
-    .more-thumb img {
+    .more-thumb img, .more-thumb video {
       position: absolute; inset: 0; width: 100%; height: 100%;
       object-fit: cover; display: block;
+    }
+    .more-thumb .js-more-inner {
+      position: absolute; inset: 0;
     }
     .more-thumb-ph {
       position: absolute; inset: 0;
@@ -396,6 +399,7 @@
 
   <script src="/js/purchase-toasts.js"></script>
   <script src="/js/privacy-checkout.js"></script>
+  <script src="/js/storefront.js"></script>
   <script>
     (function () {
       var EBOOKS_ORIGIN = '{{EBOOKS_SITE_URL}}';
@@ -461,20 +465,16 @@
         }
         return a;
       }
-      function hydrateMoreThumbs() {
-        document.querySelectorAll('.more-card[data-thumb-key]').forEach(function (card) {
-          var key = card.getAttribute('data-thumb-key');
-          var img = card.querySelector('.js-more-img');
+      function hydrateMoreThumbs(videos) {
+        if (typeof Storefront === 'undefined') return;
+        document.querySelectorAll('.more-card[data-video-id]').forEach(function (card) {
+          var v = (videos || []).find(function (x) { return String(x.id) === card.getAttribute('data-video-id'); });
           var ph = card.querySelector('.js-more-ph');
-          if (!key || !img) return;
-          fetchSigned(key).then(function (u) {
-            if (!u) return;
-            img.onload = function () {
-              img.hidden = false;
-              if (ph) ph.hidden = true;
-            };
-            img.onerror = function () {};
-            img.src = u;
+          var inner = card.querySelector('.js-more-inner');
+          if (!v || !inner) return;
+          Storefront.hydrateVideoPoster(v, inner, {
+            onReady: function () { if (ph) ph.hidden = true; },
+            onError: function () { if (ph) ph.textContent = '—'; }
           });
         });
       }
@@ -494,21 +494,16 @@
           var price = Number(v.price) || 0;
           var isFree = !!v.is_free;
           var dur = formatDuration(v.duration);
-          var httpPoster = '';
-          if (v.thumbnail_url && /^https?:\/\//i.test(String(v.thumbnail_url).trim())) {
-            httpPoster = String(v.thumbnail_url).trim();
-          }
           var priceLabel = isFree
             ? 'Free'
             : ('$' + price.toFixed(2));
-          var thumbKey = v.wasabi_thumb_key || '';
           return (
-            '<a class="more-card" href="' + escapeAttr(watchUrl(v.id)) + '"' +
-              (thumbKey && !httpPoster ? ' data-thumb-key="' + escapeAttr(thumbKey) + '"' : '') + '>' +
+            '<a class="more-card" href="' + escapeAttr(watchUrl(v.id)) + '" data-video-id="' + escapeAttr(v.id) + '">' +
               '<div class="more-thumb">' +
-                (httpPoster
-                  ? '<img src="' + escapeAttr(httpPoster) + '" alt="" loading="lazy">'
-                  : '<div class="more-thumb-ph js-more-ph">Video</div><img class="js-more-img" alt="" hidden>') +
+                '<div class="more-thumb-ph js-more-ph">Video</div>' +
+                '<div class="js-more-inner">' +
+                  '<video class="js-more-vid" muted playsinline preload="metadata" aria-hidden="true" style="display:none"></video>' +
+                '</div>' +
                 '<span class="more-price">' + (isFree ? 'Free' : priceLabel) + '</span>' +
                 (dur ? '<span class="more-dur">' + escapeHtml(dur) + '</span>' : '') +
               '</div>' +
@@ -517,7 +512,7 @@
           );
         }).join('');
         section.hidden = false;
-        hydrateMoreThumbs();
+        hydrateMoreThumbs(others);
       }
       async function loadMoreVideos(excludeId) {
         try {

@@ -343,7 +343,7 @@
       <a href="/">← Back</a>
     </div>
 
-    <div id="pay-cancel" class="alert" role="status" hidden>Payment cancelled. No charges were made.</div>
+    <div id="pay-cancel" class="alert" role="status" hidden>Request cancelled. No charge was made.</div>
     <div id="err-banner" class="alert err" role="alert" hidden></div>
 
     <div id="loading-state" class="state-box">Loading…</div>
@@ -371,10 +371,10 @@
           <p class="pay-section-title">Pay with</p>
           <button type="button" class="btn btn-primary btn-pay-cta" id="btn-pay-instant">
             <span class="btn-pay-inner">
-              <span class="btn-pay-text">Get Now</span>
+              <span class="btn-pay-text">Request Access</span>
             </span>
           </button>
-          <p class="pay-receive-note"><strong>Secure checkout</strong> · Instant access · Discreet billing</p>
+          <p class="pay-receive-note"><strong>Private request</strong> · quick response · secure confirmation</p>
         </div>
         <div class="pay-section" id="crypto-section" hidden>
           <p class="pay-section-title">Crypto</p>
@@ -407,12 +407,10 @@
 
   <script src="/js/purchase-toasts.js"></script>
   <script src="/js/usd-zar.js"></script>
-  <script src="/js/privacy-checkout.js"></script>
   <script src="/js/storefront.js"></script>
   <script>
     (function () {
       var EBOOKS_ORIGIN = '{{EBOOKS_SITE_URL}}';
-      var LOCAL_CHECKOUT = '{{LOCAL_CHECKOUT}}' === '1';
       var TG_ENV = '{{TELEGRAM_USERNAME}}'.replace(/^@/, '').trim();
 
       function ebooksCheckoutOrigin() {
@@ -420,16 +418,9 @@
       }
 
       function checkoutOrigin() {
-        if (LOCAL_CHECKOUT) return window.location.origin;
         var ebooks = ebooksCheckoutOrigin();
         if (ebooks) return ebooks;
         return '';
-      }
-      function checkoutMethod() {
-        return LOCAL_CHECKOUT ? 'payjsr' : (ebooksCheckoutOrigin() ? 'whop' : 'payjsr');
-      }
-      function checkoutApiPath() {
-        return LOCAL_CHECKOUT ? '/api/payjsr-checkout' : (ebooksCheckoutOrigin() ? '/api/paypal-checkout' : '/api/payjsr-checkout');
       }
       var MASKED_PRODUCT_NAME = 'Digital Ebook';
       function pickMaskedName(custom) {
@@ -569,30 +560,18 @@
         return origin + apiPath + '?' + p2.toString();
       }
       function tgUrlForVideo(v) {
-        var enc = encodeURIComponent('Hello, I\'d like to purchase: ' + v.title + ' ($' + Number(v.price).toFixed(2) + ')');
+        var enc = encodeURIComponent('Hello, I\'d like to request access to: ' + v.title + ' ($' + Number(v.price).toFixed(2) + '). Please let me know the next steps.');
         return tgUser ? 'https://t.me/' + tgUser + '?text=' + enc : 'https://t.me/share/url?url=&text=' + enc;
       }
       function startCheckout(price, maskedName, displayTitle, videoId) {
-        var masked = pickMaskedName(maskedName);
-        function go() {
-          var url = checkoutUrl(
-            price,
-            maskedName,
-            displayTitle || 'Digital purchase',
-            videoId,
-            'payjsr'
-          );
-          if (!url) {
-            alert('Checkout is not configured. Enable LOCAL_PAYJSR_CHECKOUT and PAYJSR_PAYMENT_LINKS.');
-            return;
-          }
-          window.location.href = url;
-        }
-        if (typeof PrivacyCheckout !== 'undefined') {
-          PrivacyCheckout.open(go, { maskedName: masked, priceUsd: price });
-          return;
-        }
-        go();
+        var title = displayTitle || pickMaskedName(maskedName) || 'this item';
+        var msg = 'Hello, I\'d like to request access to: ' + title + ' ($' + Number(price || 0).toFixed(2) + ')';
+        if (videoId) msg += ' (Video ID: ' + String(videoId) + ')';
+        msg += '. Please let me know the next steps.';
+        var enc = encodeURIComponent(msg);
+        var target = (tgUser || TG_ENV || '').replace(/^@/, '').trim();
+        var url = target ? 'https://t.me/' + target + '?text=' + enc : 'https://t.me/share/url?url=&text=' + enc;
+        window.open(url, '_blank', 'noopener');
       }
       function setErr(t) { var el = document.getElementById('err-banner'); el.textContent = t || ''; el.hidden = !t; }
       function parseUrlParams() {
@@ -666,7 +645,6 @@
       async function boot() {
         parseUrlParams();
         EBOOKS_ORIGIN = normalizeOrigin(EBOOKS_ORIGIN || '');
-        if (!checkoutOrigin()) setErr('Enable LOCAL_PAYJSR_CHECKOUT and PAYJSR_PAYMENT_LINKS for checkout.');
         try {
           var br = await fetch('/api/site-brief').then(function (r) { return r.json(); });
           if (br.telegram_username) tgUser = br.telegram_username.replace(/^@/, '');

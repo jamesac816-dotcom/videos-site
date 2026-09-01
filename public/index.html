@@ -505,8 +505,8 @@
   <div id="success-page">
     <div class="success-card">
       <div class="success-spinner" aria-hidden="true"></div>
-      <h2>Payment confirmed!</h2>
-      <p>Unlocking your access now — you’ll be redirected to Telegram in a moment.</p>
+      <h2>Access ready</h2>
+      <p>Your request has been approved — you’ll be redirected to Telegram in a moment.</p>
       <a id="success-tg-btn" class="btn-success-tg" href="#" target="_blank" rel="noopener">Open my content</a>
     </div>
   </div>
@@ -530,10 +530,10 @@
   <div class="container">
     <div class="promo-banner">
       <div class="promo-title">All Content — $150 <span class="zar-eq" data-usd="150"></span></div>
-      <div class="promo-sub">Full collection · Instant access after payment · Secure encrypted checkout</div>
+      <div class="promo-sub">Full collection · Instant access after confirmation · Secure private request</div>
       <div class="promo-actions">
-        <button type="button" class="promo-btn primary" id="promo-pay">Get Now — $150 <span class="zar-eq" data-usd="150" style="color:#ffe0e6;margin-left:0.25rem"></span></button>
-        <a class="promo-btn" id="promo-tg" href="#" target="_blank" rel="noopener">Need help? Telegram</a>
+        <button type="button" class="promo-btn primary" id="promo-pay">Request Access</button>
+        <a class="promo-btn" id="promo-tg" href="#" target="_blank" rel="noopener">Need help? Message us</a>
       </div>
     </div>
 
@@ -548,7 +548,7 @@
       </span>
     </div>
 
-    <div id="pay-cancel" class="alert" role="status" hidden>Payment cancelled. No charges were made.</div>
+    <div id="pay-cancel" class="alert" role="status" hidden>Request cancelled. No charge was made.</div>
     <div id="err-banner" class="alert err" role="alert" hidden></div>
 
     <div class="toolbar">
@@ -584,12 +584,10 @@
 
   <script src="/js/purchase-toasts.js"></script>
   <script src="/js/usd-zar.js"></script>
-  <script src="/js/privacy-checkout.js"></script>
   <script src="/js/storefront.js"></script>
   <script>
     (function () {
       var EBOOKS_ORIGIN = '{{EBOOKS_SITE_URL}}';
-      var LOCAL_CHECKOUT = '{{LOCAL_CHECKOUT}}' === '1';
       var TG_ENV = '{{TELEGRAM_USERNAME}}'.replace(/^@/, '').trim();
       var MASKED_PRODUCT_NAME = 'Digital Ebook';
 
@@ -598,16 +596,9 @@
       }
 
       function checkoutOrigin() {
-        if (LOCAL_CHECKOUT) return window.location.origin;
         var ebooks = ebooksCheckoutOrigin();
         if (ebooks) return ebooks;
         return '';
-      }
-      function checkoutMethod() {
-        return LOCAL_CHECKOUT ? 'payjsr' : (ebooksCheckoutOrigin() ? 'whop' : 'payjsr');
-      }
-      function checkoutApiPath() {
-        return LOCAL_CHECKOUT ? '/api/payjsr-checkout' : (ebooksCheckoutOrigin() ? '/api/paypal-checkout' : '/api/payjsr-checkout');
       }
       function pickMaskedName(custom) {
         if (custom && String(custom).trim()) return String(custom).trim();
@@ -756,7 +747,7 @@
         return (
           '<a class="btn btn-telegram' + (extraClass ? ' ' + extraClass : '') + '" href="' + escapeAttr(href || '#') +
           '" target="_blank" rel="noopener" onclick="event.stopPropagation()">' +
-          TG_ICON + ' Questions? Telegram</a>'
+          TG_ICON + ' Message on Telegram</a>'
         );
       }
 
@@ -764,7 +755,7 @@
         var p = Number(price) || 0;
         return (
           '<button type="button" class="btn btn-primary btn-buy js-payopen">' +
-            '<span class="btn-buy-main">Get Now · $' + p.toFixed(2) + '</span>' +
+            '<span class="btn-buy-main">Request Access · $' + p.toFixed(2) + '</span>' +
             '<span class="btn-buy-zar zar-eq" data-usd="' + p + '"></span>' +
           '</button>'
         );
@@ -772,61 +763,43 @@
 
       function tgUrlForVideo(v, tgUser) {
         var msg =
-          'Hello, I\'d like to purchase: ' + v.title + ' ($' + Number(v.price).toFixed(2) + ')';
+          'Hello, I\'d like to request access to: ' + v.title + ' ($' + Number(v.price).toFixed(2) + '). Please let me know the next steps.';
         var enc = encodeURIComponent(msg);
         if (tgUser) return 'https://t.me/' + tgUser + '?text=' + enc;
         return 'https://t.me/share/url?url=&text=' + enc;
       }
 
       function tgUrlForPromo(tgUser) {
-        var msg = 'Hello, I\'d like to purchase the All Content package ($150).';
+        var msg = 'Hello, I\'d like to request access to the full collection ($150). Please let me know the next steps.';
         var enc = encodeURIComponent(msg);
         if (tgUser) return 'https://t.me/' + tgUser + '?text=' + enc;
         return 'https://t.me/share/url?url=&text=' + enc;
       }
 
-      function redirectCheckout(price, maskedName, displayTitle, videoId, extra) {
-        var url = checkoutUrl(
-          price,
-          maskedName,
-          displayTitle || 'Digital purchase',
-          videoId,
-          'payjsr'
-        );
-        if (!url) {
-          alert('Checkout is not configured. Enable LOCAL_PAYJSR_CHECKOUT and PAYJSR_PAYMENT_LINKS.');
-          return;
-        }
-        if (extra && extra.offerType) {
-          try {
-            var u = new URL(url, window.location.origin);
-            u.searchParams.set('offer_type', extra.offerType);
-            url = u.toString();
-          } catch (e) {}
-        }
-        window.location.href = url;
+      function telegramInterestUrl(title, price, videoId) {
+        var msg =
+          'Hello, I\'d like to request access to: ' +
+          (title || 'this item') +
+          ' ($' + Number(price || 0).toFixed(2) + ')';
+        if (videoId) msg += ' (Video ID: ' + String(videoId) + ')';
+        msg += '. Please let me know the next steps.';
+        var enc = encodeURIComponent(msg);
+        var target = (tgUser || TG_ENV || '').replace(/^@/, '').trim();
+        if (target) return 'https://t.me/' + target + '?text=' + enc;
+        return 'https://t.me/share/url?url=&text=' + enc;
       }
 
       function startCheckout(price, maskedName, displayTitle, videoId) {
-        var masked = pickMaskedName(maskedName);
-        if (typeof PrivacyCheckout !== 'undefined') {
-          PrivacyCheckout.open(function () {
-            redirectCheckout(price, maskedName, displayTitle, videoId);
-          }, { maskedName: masked, priceUsd: price });
-          return;
-        }
-        redirectCheckout(price, maskedName, displayTitle, videoId);
+        var targetUrl = telegramInterestUrl(displayTitle || pickMaskedName(maskedName), price, videoId);
+        window.open(targetUrl, '_blank', 'noopener');
       }
 
       function startPromoCheckout() {
-        var masked = pickMaskedName();
-        if (typeof PrivacyCheckout !== 'undefined') {
-          PrivacyCheckout.open(function () {
-            redirectCheckout(150, masked, 'VIP Access - Full Collection', '', { offerType: 'all_content' });
-          }, { maskedName: masked, priceUsd: 150 });
-          return;
-        }
-        redirectCheckout(150, masked, 'VIP Access - Full Collection', '', { offerType: 'all_content' });
+        var msg = 'Hello, I\'d like to request access to the full collection ($150). Please let me know the next steps.';
+        var enc = encodeURIComponent(msg);
+        var target = (tgUser || TG_ENV || '').replace(/^@/, '').trim();
+        var url = target ? 'https://t.me/' + target + '?text=' + enc : 'https://t.me/share/url?url=&text=' + enc;
+        window.open(url, '_blank', 'noopener');
       }
 
       function setErr(t) {
@@ -1107,9 +1080,6 @@
         parseUrlParams();
         EBOOKS_ORIGIN = normalizeOrigin(EBOOKS_ORIGIN || '');
         var hints = [];
-        if (!checkoutOrigin()) {
-          hints.push('Enable LOCAL_PAYJSR_CHECKOUT and PAYJSR_PAYMENT_LINKS for checkout.');
-        }
         try {
           var hc = await fetch('/api/health').then(function (x) { return x.json(); });
           if (!hc.wasabi_signed_urls) {

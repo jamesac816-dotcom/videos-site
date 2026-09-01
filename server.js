@@ -7,7 +7,6 @@ import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { registerPayjsrRoutes } from './payjsr-checkout.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -20,11 +19,6 @@ const ebooksEnv =
   process.env.VITE_PAYMENT_URL ||
   '';
 const EBOOKS_SITE_URL = String(ebooksEnv || '').replace(/\/+$/, '');
-/** PayJSR on this host when enabled and links are configured (no ebooks/Whop hop). */
-const LOCAL_CHECKOUT =
-  String(process.env.LOCAL_PAYJSR_CHECKOUT || '0').trim() !== '0' &&
-  Boolean(String(process.env.PAYJSR_PAYMENT_LINKS || '').trim());
-
 const TELEGRAM_USERNAME =
   process.env.TELEGRAM_USERNAME ||
   process.env.VITE_TELEGRAM_USERNAME ||
@@ -411,7 +405,6 @@ app.get('/api/health', async (req, res) => {
     site: SITE_NAME,
     supabase: Boolean(supabase),
     ebooks_checkout_origin: Boolean(EBOOKS_SITE_URL),
-    local_payjsr_checkout: LOCAL_CHECKOUT,
     telegram: Boolean(String(TELEGRAM_USERNAME || '').trim()),
     wasabi_signed_urls: Boolean(w.signingReady),
     wasabi_from_env: Boolean(wasabiSecretFromEnv().signingReady),
@@ -470,10 +463,6 @@ app.get('/api/fx-rate', async (req, res) => {
     res.json({ success: true, from: 'USD', to: 'ZAR', rate: FX_FALLBACK_USD_ZAR, source: 'fallback' });
   }
 });
-
-if (LOCAL_CHECKOUT) {
-  registerPayjsrRoutes(app, { siteName: SITE_NAME });
-}
 
 async function handleSignedUrlRequest(req, res) {
   try {
@@ -744,8 +733,7 @@ async function renderHtmlTemplate(fileName) {
   return html
     .replace(/\{\{SITE_NAME\}\}/g, SITE_NAME)
     .replace(/\{\{TELEGRAM_USERNAME\}\}/g, telegram)
-    .replace(/\{\{EBOOKS_SITE_URL\}\}/g, EBOOKS_SITE_URL)
-    .replace(/\{\{LOCAL_CHECKOUT\}\}/g, LOCAL_CHECKOUT ? '1' : '0');
+    .replace(/\{\{EBOOKS_SITE_URL\}\}/g, EBOOKS_SITE_URL);
 }
 
 app.get('/', async (req, res) => {

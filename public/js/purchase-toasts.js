@@ -59,12 +59,12 @@
   }
 
   function randInt(min, max) {
-    return Math.floor(min + Math.random() * (max - min + 1));
+    return min;
   }
 
   function pick(arr) {
     if (!arr.length) return null;
-    return arr[Math.floor(Math.random() * arr.length)];
+    return arr[0];
   }
 
   function paidProducts() {
@@ -77,15 +77,13 @@
     var locale = pick(LOCALE_BAG) || LOCALES[0];
     var method = pick(METHODS);
     var who = locale.flag + ' Someone in ' + locale.label;
-    if (Math.random() < 0.22) {
-      return {
-        flag: locale.flag,
-        who: who,
-        method: method,
-        title: PROMO.title,
-        price: PROMO.price
-      };
-    }
+    return {
+      flag: locale.flag,
+      who: who,
+      method: method,
+      title: PROMO.title,
+      price: PROMO.price
+    };
     var pool = paidProducts();
     if (!pool.length) {
       return {

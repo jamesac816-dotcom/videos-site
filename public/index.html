@@ -11,16 +11,16 @@
       --primary: #ff2d55;
       --primary-hover: #e02548;
       --bg: #0b0b0d;
-      --surface: #151518;
-      --surface-hover: #1e1e24;
+      --surface: #141417;
+      --surface-hover: #1b1d22;
       --text: #f5f5f7;
-      --muted: #a1a1aa;
+      --muted: #a5a7b1;
       --stroke: rgba(255, 255, 255, 0.08);
-      --stroke-hover: rgba(255, 255, 255, 0.15);
+      --stroke-hover: rgba(255, 255, 255, 0.14);
       --danger: #ff6b81;
-      --success: #3dd68c;
+      --success: #39d98a;
       --primary-soft: rgba(255, 45, 85, 0.14);
-      --primary-border: rgba(255, 45, 85, 0.35);
+      --primary-border: rgba(255, 45, 85, 0.38);
       --info-bg: rgba(255, 45, 85, 0.1);
       --info-border: rgba(255, 45, 85, 0.3);
       --info-text: #ff8da1;
@@ -91,11 +91,12 @@
     .trust-bar-item svg { width: 14px; height: 14px; fill: var(--success); flex-shrink: 0; }
 
     .promo-banner {
-      border: 1px solid var(--stroke);
-      border-radius: 12px;
-      padding: 1.15rem 1.25rem;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 1.2rem 1.3rem;
       margin: 1.25rem 0 1rem;
-      background: linear-gradient(135deg, rgba(255, 45, 85, 0.14) 0%, var(--surface) 58%);
+      background: linear-gradient(135deg, rgba(255, 45, 85, 0.18) 0%, rgba(20, 20, 23, 0.96) 52%, rgba(20, 20, 23, 1) 100%);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
     }
     .promo-title {
       font-size: 1.15rem; font-weight: 700; margin-bottom: 0.2rem; letter-spacing: -0.02em;
@@ -103,25 +104,35 @@
     .promo-sub { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.85rem; }
     .promo-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
     .promo-btn {
-      border-radius: 8px;
-      padding: 0.6rem 1.05rem;
+      border-radius: 10px;
+      padding: 0.7rem 1.1rem;
       font-size: 0.85rem;
-      font-weight: 600;
+      font-weight: 700;
       text-decoration: none;
       border: 1px solid var(--stroke);
       color: var(--text);
-      background: var(--bg);
+      background: rgba(255, 255, 255, 0.02);
       cursor: pointer;
       font-family: inherit;
-      transition: background 0.15s, border-color 0.15s;
+      transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
     }
-    .promo-btn:hover { background: var(--surface-hover); }
+    .promo-btn:hover {
+      background: var(--surface-hover);
+      border-color: var(--stroke-hover);
+      transform: translateY(-1px);
+    }
     .promo-btn.primary {
-      background: var(--primary);
+      background: linear-gradient(180deg, #ff3b68 0%, var(--primary) 100%);
       border-color: var(--primary);
       color: #fff;
+      box-shadow: 0 12px 28px rgba(255, 45, 85, 0.28);
     }
-    .promo-btn.primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+    .promo-btn.primary:hover {
+      background: linear-gradient(180deg, #ff4d77 0%, var(--primary-hover) 100%);
+      border-color: var(--primary-hover);
+      box-shadow: 0 14px 30px rgba(255, 45, 85, 0.34);
+    }
 
     .toolbar {
       display: flex; flex-direction: column; gap: 0.75rem;
@@ -272,19 +283,25 @@
     .vcard-meta svg { flex-shrink: 0; opacity: 0.55; }
     .btn-row { display: flex; gap: 0.4rem; margin-top: 0.15rem; }
     .btn {
-      font-family: inherit; font-weight: 600; font-size: 0.78rem; border-radius: 8px;
-      padding: 0.5rem 0.7rem; cursor: pointer; border: 1px solid var(--stroke);
+      font-family: inherit; font-weight: 600; font-size: 0.78rem; border-radius: 10px;
+      padding: 0.6rem 0.8rem; cursor: pointer; border: 1px solid var(--stroke);
       background: var(--bg); color: var(--text); text-align: center; text-decoration: none;
-      transition: background 0.15s, border-color 0.15s;
+      transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
       flex: 1;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
     }
-    .btn:hover { background: var(--surface); }
+    .btn:hover {
+      background: var(--surface);
+      border-color: var(--stroke-hover);
+      transform: translateY(-1px);
+    }
     .btn-primary {
-      background: var(--primary);
+      background: linear-gradient(180deg, #ff3b68 0%, var(--primary) 100%);
       color: #fff;
       border-color: var(--primary);
+      box-shadow: 0 12px 26px rgba(255, 45, 85, 0.25);
     }
-    .btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); color: #fff; }
+    .btn-primary:hover { background: linear-gradient(180deg, #ff4d77 0%, var(--primary-hover) 100%); border-color: var(--primary-hover); color: #fff; box-shadow: 0 14px 30px rgba(255, 45, 85, 0.32); }
     .btn-buy {
       width: 100%; flex: none;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -606,12 +623,7 @@
       }
 
       function shuffle(arr) {
-        var a = arr.slice();
-        for (var i = a.length - 1; i > 0; i--) {
-          var j = Math.floor(Math.random() * (i + 1));
-          var t = a[i]; a[i] = a[j]; a[j] = t;
-        }
-        return a;
+        return (arr || []).slice();
       }
 
       function orderVideosForGrid(videos) {
@@ -620,16 +632,16 @@
         var paid = list.filter(function (v) {
           return !v.is_free && Number(v.price) > 0;
         });
-        if (!paid.length) return shuffle(list);
+        if (!paid.length) return list;
         var maxP = paid.reduce(function (m, v) {
           return Math.max(m, Number(v.price) || 0);
         }, 0);
         var top = paid.filter(function (v) {
           return (Number(v.price) || 0) === maxP;
         });
-        var first = pickRandom(top.length ? top : paid);
+        var first = top.length ? top[0] : paid[0];
         var rest = list.filter(function (v) { return v.id !== first.id; });
-        return [first].concat(shuffle(rest));
+        return [first].concat(rest);
       }
 
       function normalizeOrigin(u) {
@@ -806,10 +818,6 @@
         var el = document.getElementById('err-banner');
         el.textContent = t || '';
         el.hidden = !t;
-      }
-
-      function pickRandom(arr) {
-        return arr[Math.floor(Math.random() * arr.length)];
       }
 
       function parseUrlParams() {

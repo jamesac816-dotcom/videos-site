@@ -251,15 +251,6 @@
       gap: 0.08rem; line-height: 1.15;
     }
     .badge-price em { font-style: normal; color: var(--primary); }
-    .zar-eq {
-      font-size: 0.7rem;
-      font-weight: 700;
-      color: var(--success);
-      letter-spacing: 0.01em;
-      white-space: nowrap;
-    }
-    .zar-eq:empty { display: none; }
-    .badge-price .zar-eq { color: var(--success); }
     .vcard-ph-free .badge-price { color: var(--primary); }
     .badge-dur {
       position: absolute; bottom: 10px; right: 10px; z-index: 3;
@@ -310,10 +301,6 @@
       box-shadow: 0 4px 22px rgba(255, 45, 85, 0.35);
     }
     .btn-buy .btn-buy-main { line-height: 1.2; }
-    .btn-buy .btn-buy-zar {
-      font-size: 0.68rem; font-weight: 600; opacity: 0.95;
-      color: #ffe0e6;
-    }
     .btn-preview-link {
       display: block; text-align: center; margin-top: 0.35rem;
       font-size: 0.72rem; font-weight: 600; color: var(--muted); text-decoration: none;
@@ -373,17 +360,11 @@
       display: inline-flex; flex-direction: column; align-items: flex-end; line-height: 1.15; gap: 0.1rem;
     }
     .price-row-amt small { font-size: 0.7rem; font-weight: 500; opacity: 0.7; margin-left: 0.1rem; color: var(--muted); }
-    .price-row-amt .zar-eq { font-size: 0.78rem; color: var(--success); }
     .pay-summary-price {
       font-size: 1.35rem; font-weight: 700; color: var(--primary);
       display: flex; flex-direction: column; align-items: center; gap: 0.12rem;
     }
     .pay-summary-price small { font-size: 0.75rem; font-weight: 500; opacity: 0.65; margin-left: 0.2rem; color: var(--muted); }
-    .pay-summary-price .zar-eq { font-size: 0.75rem; }
-    .promo-title .zar-eq {
-      display: inline; font-size: 0.78rem; font-weight: 600; margin-left: 0.35rem;
-      color: rgba(244, 244, 245, 0.65);
-    }
     .ph-card .vcard-title { color: var(--muted); font-family: ui-monospace, monospace; font-size: 0.75rem; word-break: break-all; }
 
     dialog.dlg-modal:not([open]) { display: none !important; }
@@ -517,8 +498,10 @@
       .grid { gap: 0.85rem; }
     }
   </style>
+  <link rel="stylesheet" href="/css/storefront.css">
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
   <div id="success-page">
     <div class="success-card">
       <div class="success-spinner" aria-hidden="true"></div>
@@ -531,7 +514,7 @@
   <header class="site-header">
     <div class="site-header-inner">
       <a class="brand" href="/">
-        <div class="brand-icon">18+</div>
+        <div class="brand-icon" aria-hidden="true">▶</div>
         <span class="brand-name">{{SITE_NAME}}</span>
       </a>
       <div class="header-actions">
@@ -544,10 +527,12 @@
     </div>
   </header>
 
-  <div class="container">
+  <main class="container" id="main-content">
     <div class="promo-banner">
-      <div class="promo-title">All Content — $150 <span class="zar-eq" data-usd="150"></span></div>
-      <div class="promo-sub">Full collection · Instant access after confirmation · Secure private request</div>
+      <p class="promo-eyebrow">THE COMPLETE COLLECTION</p>
+      <div class="promo-title">All content. Every folder. Just $150.</div>
+      <p class="promo-price">$150 <span>USD · Complete collection</span></p>
+      <div class="promo-sub">Get every piece of content and every folder currently listed on our website for just $150. Access is provided after payment confirmation.</div>
       <div class="promo-actions">
         <button type="button" class="promo-btn primary" id="promo-pay">Request Access</button>
         <a class="promo-btn" id="promo-tg" href="#" target="_blank" rel="noopener">Need help? Message us</a>
@@ -571,19 +556,19 @@
     <div class="toolbar">
       <div>
         <h1 id="grid-heading">Videos</h1>
-        <p class="toolbar-sub">Browse and unlock content</p>
+        <p class="toolbar-sub">Explore previews and find your next video. All prices in USD.</p>
       </div>
       <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
         <span class="chip" id="hydrate-chip" hidden>Loading…</span>
         <div class="search-wrap">
           <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-          <input type="search" class="search" id="search" placeholder="Search…" autocomplete="off">
+          <input type="search" class="search" id="search" placeholder="Search videos…" aria-label="Search videos" autocomplete="off">
         </div>
       </div>
     </div>
 
     <div class="grid" id="grid"></div>
-  </div>
+  </main>
 
   <dialog id="dlg-details" class="dlg-modal">
     <div class="dlg-h"><strong id="dlg-d-title">Details</strong><button type="button" class="dlg-x" data-close="d" aria-label="Close">×</button></div>
@@ -592,15 +577,13 @@
 
   <footer>
     <div class="trust-footer-row">
-      <span>⚡ Instant Access</span>
-      <span>💳 Multiple Payment Methods</span>
-      <span>💬 Support via Telegram</span>
+      <span>Access after confirmation</span>
+      <span>Prices in USD</span>
+      <span>Support via Telegram</span>
     </div>
     <p>© {{SITE_NAME}} · 18+ only</p>
   </footer>
 
-  <script src="/js/purchase-toasts.js"></script>
-  <script src="/js/usd-zar.js"></script>
   <script src="/js/storefront.js"></script>
   <script>
     (function () {
@@ -768,7 +751,6 @@
         return (
           '<button type="button" class="btn btn-primary btn-buy js-payopen">' +
             '<span class="btn-buy-main">Request Access · $' + p.toFixed(2) + '</span>' +
-            '<span class="btn-buy-zar zar-eq" data-usd="' + p + '"></span>' +
           '</button>'
         );
       }
@@ -922,6 +904,16 @@
       function renderGrid(list, isPlaceholder) {
         var g = document.getElementById('grid');
         g.innerHTML = '';
+        if (!list.length) {
+          var empty = document.createElement('p');
+          empty.className = 'catalog-empty';
+          empty.setAttribute('role', 'status');
+          empty.textContent = document.getElementById('search').value.trim()
+            ? 'No videos found. Try another search.'
+            : 'No videos available yet. Please check back soon.';
+          g.appendChild(empty);
+          return;
+        }
         list.forEach(function (v) {
           var el = document.createElement('article');
           var isFree = !isPlaceholder && !!v.is_free;
@@ -979,7 +971,7 @@
               (!isFree
                 ? '<div class="price-row">' +
                     '<span class="price-row-label">Price</span>' +
-                    '<span class="price-row-amt">$' + price.toFixed(2) + '<small>USD</small> <span class="zar-eq" data-usd="' + price + '"></span></span>' +
+                    '<span class="price-row-amt">$' + price.toFixed(2) + '<small>USD</small></span>' +
                   '</div>'
                 : '') +
             '</div>';
@@ -1005,7 +997,6 @@
 
         if (!isPlaceholder) {
           hydrateThumbs();
-          if (typeof UsdZar !== 'undefined') UsdZar.refresh(g);
         }
       }
 
@@ -1087,14 +1078,6 @@
       async function boot() {
         parseUrlParams();
         EBOOKS_ORIGIN = normalizeOrigin(EBOOKS_ORIGIN || '');
-        var hints = [];
-        try {
-          var hc = await fetch('/api/health').then(function (x) { return x.json(); });
-          if (!hc.wasabi_signed_urls) {
-            hints.push('Wasabi signing is off — check Wasabi env / site_config.');
-          }
-        } catch (e2) {}
-        if (hints.length) setErr(hints.join(' '));
 
         try {
           var br = await fetch('/api/site-brief').then(function (r) { return r.json(); });
@@ -1108,7 +1091,6 @@
         else { nav.href = '#'; nav.style.opacity = '0.4'; }
         var promoPay = document.getElementById('promo-pay');
         if (promoPay) promoPay.addEventListener('click', startPromoCheckout);
-        if (typeof UsdZar !== 'undefined') UsdZar.refresh();
         var promoTg = document.getElementById('promo-tg');
         if (promoTg) {
           if (tgUser) promoTg.href = tgUrlForPromo(tgUser);
@@ -1133,10 +1115,6 @@
         var pack = await vidRes.json();
         allVideos = orderVideosForGrid(pack.videos || []);
         renderGrid(allVideos, false);
-        if (typeof PurchaseToasts !== 'undefined') {
-          PurchaseToasts.setVideos(allVideos);
-          PurchaseToasts.start({ videos: allVideos });
-        }
       }
 
       boot().catch(function (e) {

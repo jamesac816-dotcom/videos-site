@@ -118,9 +118,6 @@
     .pay-panel h2 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.55rem; }
     .pay-price { font-size: 1.6rem; font-weight: 700; color: var(--primary); margin-bottom: 0.85rem; display: flex; flex-direction: column; gap: 0.15rem; }
     .pay-price small { font-size: 0.8rem; opacity: 0.7; margin-left: 0.15rem; color: var(--muted); font-weight: 500; }
-    .pay-price .zar-eq { font-size: 0.85rem; font-weight: 700; color: var(--success); }
-    .zar-eq { font-size: 0.7rem; font-weight: 700; color: var(--success); white-space: nowrap; }
-    .zar-eq:empty { display: none; }
     .pay-section { margin-bottom: 0.9rem; }
     .pay-section-title {
       font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
@@ -294,7 +291,6 @@
       color: var(--primary);
       display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; gap: 0.06rem;
     }
-    .more-price .zar-eq { font-size: 0.68rem; color: var(--success); font-weight: 700; }
     .more-dur {
       position: absolute; bottom: 8px; right: 8px; z-index: 2;
       font-size: 0.62rem; font-weight: 600;
@@ -321,12 +317,14 @@
       border-top: 1px solid var(--stroke);
     }
   </style>
+  <link rel="stylesheet" href="/css/storefront.css">
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="site-header">
     <div class="site-header-inner">
       <a class="brand" href="/">
-        <div class="brand-icon">18+</div>
+        <div class="brand-icon" aria-hidden="true">▶</div>
         <span class="brand-name">{{SITE_NAME}}</span>
       </a>
       <div class="header-actions">
@@ -339,7 +337,7 @@
     </div>
   </header>
 
-  <div class="container">
+  <main class="container" id="main-content">
     <div class="topbar">
       <a href="/">← Back</a>
     </div>
@@ -400,14 +398,12 @@
         <a href="/" class="btn more-see-btn">See more</a>
       </div>
     </section>
-  </div>
+  </main>
 
   <footer>
     <p>© {{SITE_NAME}} · 18+ only</p>
   </footer>
 
-  <script src="/js/purchase-toasts.js"></script>
-  <script src="/js/usd-zar.js"></script>
   <script src="/js/storefront.js"></script>
   <script>
     (function () {
@@ -606,8 +602,7 @@
           return;
         }
         document.getElementById('v-price').innerHTML =
-          '$' + Number(v.price).toFixed(2) + '<small>USD</small> <span class="zar-eq" data-usd="' + Number(v.price) + '"></span>';
-        if (typeof UsdZar !== 'undefined') UsdZar.refresh(document.getElementById('pay-panel'));
+          '$' + Number(v.price).toFixed(2) + '<small>USD</small>';
         document.getElementById('btn-contact-tg').href = tgUrlForVideo(v);
         var payBtn = document.getElementById('btn-pay-instant');
         if (payBtn) {
@@ -654,17 +649,6 @@
         var res = await fetch('/api/videos/' + encodeURIComponent(id));
         if (!res.ok) { document.getElementById('loading-state').hidden = true; document.getElementById('error-state').hidden = false; return; }
         showVideo((await res.json()).video);
-        if (typeof PurchaseToasts !== 'undefined') {
-          fetch('/api/videos').then(function (r) {
-            return r.ok ? r.json() : { videos: [] };
-          }).then(function (pack) {
-            var videos = pack.videos || [];
-            if (currentVideo) videos.push(currentVideo);
-            PurchaseToasts.start({ videos: videos });
-          }).catch(function () {
-            PurchaseToasts.start({ videos: currentVideo ? [currentVideo] : [] });
-          });
-        }
       }
       boot().catch(function (e) {
         document.getElementById('loading-state').hidden = true;

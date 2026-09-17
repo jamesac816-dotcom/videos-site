@@ -24,7 +24,6 @@
       '  text-align: center;' +
       '}' +
       '.privacy-modal-usd { font-size: 1.05rem; font-weight: 700; color: var(--text, #f5f5f7); }' +
-      '.privacy-modal-zar { font-size: 0.82rem; font-weight: 600; color: var(--success, #3dd68c); margin-top: 0.35rem; line-height: 1.4; }' +
       '.privacy-modal-hint { font-size: 0.72rem; line-height: 1.45; color: var(--muted, #a1a1aa); margin: 0 0 1rem; text-align: center; }' +
       '.privacy-modal-actions { display: flex; flex-direction: column; gap: 0.45rem; }' +
       '#dlg-privacy-go:disabled { opacity: 0.55; cursor: not-allowed; }';
@@ -46,7 +45,6 @@
         '<span class="privacy-modal-name" id="dlg-privacy-name">Digital Ebook</span>' +
         '<div class="privacy-modal-price" id="dlg-privacy-price" hidden>' +
           '<div class="privacy-modal-usd" id="dlg-privacy-usd"></div>' +
-          '<div class="privacy-modal-zar" id="dlg-privacy-zar"></div>' +
         '</div>' +
         '<p class="privacy-modal-hint" id="dlg-privacy-countdown">Please read — you can continue in 8s.</p>' +
         '<div class="privacy-modal-actions">' +
@@ -92,15 +90,14 @@
       timer = null;
       btn.disabled = false;
       btn.textContent = 'Continue to checkout';
-      countdownEl.textContent = 'Charged in ZAR on PayJSR · secure checkout opens next.';
+      countdownEl.textContent = 'Review the final total and payment currency at checkout.';
     }, 1000);
   }
 
   function updatePriceBlock(opts) {
     var block = document.getElementById('dlg-privacy-price');
     var usdEl = document.getElementById('dlg-privacy-usd');
-    var zarEl = document.getElementById('dlg-privacy-zar');
-    if (!block || !usdEl || !zarEl) return;
+    if (!block || !usdEl) return;
 
     var usd = opts && opts.priceUsd != null ? Number(opts.priceUsd) : NaN;
     if (!Number.isFinite(usd) || usd <= 0) {
@@ -110,20 +107,6 @@
 
     block.hidden = false;
     usdEl.textContent = '$' + usd.toFixed(2) + ' USD';
-    zarEl.textContent = 'Loading ZAR rate…';
-
-    if (typeof global.UsdZar !== 'undefined') {
-      global.UsdZar.ensure(usd).then(function (label) {
-        zarEl.textContent = label
-          ? label + ' · you pay in ZAR on PayJSR'
-          : 'You pay in ZAR on PayJSR';
-      }).catch(function () {
-        zarEl.textContent = 'You pay in ZAR on PayJSR';
-      });
-      return;
-    }
-
-    zarEl.textContent = 'You pay in ZAR on PayJSR';
   }
 
   function open(onProceed, opts) {

@@ -4,15 +4,6 @@
 
 const PAYJSR_CHECKOUT_CURRENCY = 'ZAR';
 
-const CHECKOUT_DISPLAY_CURRENCIES = [
-  { code: 'ZAR', name: 'South African Rand', symbol: 'R', decimals: 2 },
-  { code: 'USD', name: 'US Dollar', symbol: '$', decimals: 2 },
-  { code: 'EUR', name: 'Euro', symbol: '€', decimals: 2 },
-  { code: 'GBP', name: 'British Pound', symbol: '£', decimals: 2 },
-  { code: 'BRL', name: 'Brazilian Real', symbol: 'R$', decimals: 2 },
-  { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', decimals: 2 },
-  { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', decimals: 2 },
-];
 
 function escapeHtml(s) {
   return String(s == null ? '' : s)
@@ -286,8 +277,7 @@ function sendPayJSRCheckoutPage(res, payload) {
     checkoutUrl,
     realTitle,
     maskedLabel,
-    zarAmountMajor,
-    zarAmountMinor,
+
     listAmountMajor,
     listCurrency,
     canceled,
@@ -307,6 +297,7 @@ function sendPayJSRCheckoutPage(res, payload) {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>${CHECKOUT_CSS}</style>
+  <link rel="stylesheet" href="/css/storefront.css">
 </head>
 <body>
   <div class="wrap">
@@ -324,74 +315,17 @@ function sendPayJSRCheckoutPage(res, payload) {
           <span>Processor sees a neutral label (<span style="font-family:ui-monospace,monospace;color:var(--primary)">${escapeHtml(maskedLabel)}</span>). Your bank statement stays discreet.</span>
         </div>
         <div class="fx-panel">
-          <p class="label">Amount to pay</p>
-          <p class="amount"><span class="cur-symbol">R</span>${escapeHtml(zarAmountMajor)} <span class="cur-code">ZAR</span></p>
-          <p class="label" style="margin-top:0.35rem">List price</p>
-          <p style="font-size:0.88rem;color:var(--muted);margin-bottom:0.15rem">$${escapeHtml(listAmountMajor)} ${escapeHtml(listCurrency)}</p>
-          <p class="label" style="margin-top:0.55rem">See equivalent</p>
-          <div class="fx-row">
-            <select id="display-currency" aria-label="Display currency"></select>
-          </div>
-          <p class="fx-equiv" id="fx-equiv">Loading rate…</p>
-          <p class="fx-note">Charged in <strong>ZAR</strong> on PayJSR. Card, Apple Pay &amp; Cash App supported.</p>
+          <p class="label">List price</p>
+          <p class="amount">${escapeHtml(listAmountMajor)} <span class="cur-code">${escapeHtml(listCurrency)}</span></p>
+          <p class="fx-note">Review the final total and payment currency on the payment provider's checkout.</p>
         </div>
-        <a class="btn" id="btn-payjsr" href="${escapeHtml(checkoutUrl)}">Get Now</a>
+        <a class="btn" id="btn-payjsr" href="${escapeHtml(checkoutUrl)}">Continue to payment</a>
         <p class="fine">Instant access after payment confirmation.</p>
         <a class="back" href="${escapeHtml(cancelHref || '/')}">← Back to store</a>
       </div>
     </article>
   </div>
-  <script>
-    (function () {
-      var ZAR_MINOR = ${JSON.stringify(zarAmountMinor)};
-      var CURRENCIES = ${JSON.stringify(CHECKOUT_DISPLAY_CURRENCIES)};
-      var zarMajor = ZAR_MINOR / 100;
-      var select = document.getElementById('display-currency');
-      var equiv = document.getElementById('fx-equiv');
-      var preferred = 'USD';
-      try {
-        var saved = localStorage.getItem('checkout_display_currency');
-        if (saved) preferred = saved.toUpperCase();
-      } catch (e) {}
-      function meta(code) {
-        for (var i = 0; i < CURRENCIES.length; i++) if (CURRENCIES[i].code === code) return CURRENCIES[i];
-        return { code: code, symbol: '', decimals: 2 };
-      }
-      function fmt(major, m) {
-        var n = Number(major);
-        if (!isFinite(n)) return '—';
-        var d = m.decimals != null ? m.decimals : 2;
-        var txt = n.toLocaleString(undefined, { minimumFractionDigits: Math.min(d, 2), maximumFractionDigits: d });
-        return (m.symbol || '') + txt + ' ' + m.code;
-      }
-      CURRENCIES.forEach(function (c) {
-        var opt = document.createElement('option');
-        opt.value = c.code;
-        opt.textContent = c.code + ' — ' + c.name;
-        select.appendChild(opt);
-      });
-      select.value = preferred;
-      function updateFx() {
-        var code = select.value;
-        try { localStorage.setItem('checkout_display_currency', code); } catch (e) {}
-        if (code === 'ZAR') { equiv.textContent = '≈ ' + fmt(zarMajor, meta('ZAR')); return; }
-        equiv.textContent = 'Loading…';
-        fetch('/api/payjsr-fx?from=ZAR&to=' + encodeURIComponent(code) + '&amount=' + encodeURIComponent(ZAR_MINOR))
-          .then(function (r) { return r.json(); })
-          .then(function (data) {
-            if (!data || !data.ok) throw new Error('fail');
-            var m = meta(code);
-            var major = data.amount_minor / Math.pow(10, m.decimals || 2);
-            equiv.textContent = '≈ ' + fmt(major, m);
-          })
-          .catch(function () {
-            equiv.textContent = 'You will pay R' + zarMajor.toFixed(2) + ' ZAR.';
-          });
-      }
-      select.addEventListener('change', updateFx);
-      updateFx();
-    })();
-  </script>
+
 </body>
 </html>`);
 }
@@ -495,7 +429,7 @@ export function registerPayjsrRoutes(app, { siteName }) {
         });
       }
 
-      // Direct to PayJSR — FX shown in storefront modal
+      // Keep the configured payment link and provider settlement unchanged.
       if (String(q.redirect || '1') !== '0') {
         return res.redirect(302, checkoutUrl);
       }

@@ -411,59 +411,6 @@ app.get('/api/health', async (req, res) => {
   });
 });
 
-/** USD→ZAR for storefront (avoids browser CORS / blocked FX APIs). */
-const FX_FALLBACK_USD_ZAR = Number(process.env.USD_ZAR_FALLBACK) || 18.5;
-let fxCache = { rate: null, at: 0, source: '' };
-const FX_CACHE_MS = 60 * 60 * 1000;
-
-async function fetchUsdZarRate() {
-  if (fxCache.rate && Date.now() - fxCache.at < FX_CACHE_MS) {
-    return { rate: fxCache.rate, source: fxCache.source || 'cache' };
-  }
-  const controllers = [];
-  async function tryUrl(url, pick) {
-    const ac = new AbortController();
-    controllers.push(ac);
-    const t = setTimeout(() => ac.abort(), 8000);
-    try {
-      const r = await fetch(url, { signal: ac.signal });
-      if (!r.ok) throw new Error('http ' + r.status);
-      const d = await r.json();
-      const zar = pick(d);
-      if (zar == null || !Number.isFinite(Number(zar))) throw new Error('no zar');
-      return Number(zar);
-    } finally {
-      clearTimeout(t);
-    }
-  }
-  try {
-    let rate = null;
-    let source = '';
-    try {
-      rate = await tryUrl('https://api.frankfurter.app/latest?from=USD&to=ZAR', (d) => d?.rates?.ZAR);
-      source = 'frankfurter';
-    } catch {
-      rate = await tryUrl('https://open.er-api.com/v6/latest/USD', (d) => d?.rates?.ZAR);
-      source = 'open.er-api';
-    }
-    fxCache = { rate, at: Date.now(), source };
-    return { rate, source };
-  } catch {
-    fxCache = { rate: FX_FALLBACK_USD_ZAR, at: Date.now(), source: 'fallback' };
-    return { rate: FX_FALLBACK_USD_ZAR, source: 'fallback' };
-  }
-}
-
-app.get('/api/fx-rate', async (req, res) => {
-  try {
-    const { rate, source } = await fetchUsdZarRate();
-    res.set('Cache-Control', 'public, max-age=300');
-    res.json({ success: true, from: 'USD', to: 'ZAR', rate, source });
-  } catch (e) {
-    res.json({ success: true, from: 'USD', to: 'ZAR', rate: FX_FALLBACK_USD_ZAR, source: 'fallback' });
-  }
-});
-
 async function handleSignedUrlRequest(req, res) {
   try {
     let fileId = req.params.fileId;

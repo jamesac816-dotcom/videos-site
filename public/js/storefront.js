@@ -223,14 +223,14 @@
   }
 
   function tgUrlForVideo(v, tgUser) {
+    var price = Number(v.price) || 0;
+    var priceLabel = Number.isInteger(price) ? String(price) : price.toFixed(2);
     var msg =
-      '🎬 **' + v.title + '**\n\n' +
-      '💰 **Price:** $' + Number(v.price).toFixed(2) + '\n' +
-      '⏱️ **Duration:** ' + (formatDuration(v.duration) || '—') + '\n' +
-      '👀 **Views:** ' + formatViews(v.views) + '\n' +
-      '📅 **Added:** ' + formatDateRel(v.created_at) + '\n\n' +
-      '📝 **Description:**\n' + (v.description || 'No description') + '\n\n' +
-      'Please let me know how to proceed with payment.';
+      'Hi 👋\n' +
+      'I want to purchase:\n' +
+      '📦 Content: ' + String(v.title || 'ALL CONTENT') + '\n' +
+      '💰 Price: $' + priceLabel + '\n' +
+      'Please send me the payment details.';
     var enc = encodeURIComponent(msg);
     if (tgUser) return 'https://t.me/' + tgUser + '?text=' + enc;
     return 'https://t.me/share/url?url=&text=' + enc;

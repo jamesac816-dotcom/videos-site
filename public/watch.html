@@ -551,15 +551,21 @@
         p2.set('cancel_url', origin + cancelBack);
         return origin + apiPath + '?' + p2.toString();
       }
+      function formatTelegramPrice(value) {
+        var price = Number(value) || 0;
+        return Number.isInteger(price) ? String(price) : price.toFixed(2);
+      }
+      function telegramInterestMessage(content, price) {
+        return 'Hi 👋\nI want to purchase:\n📦 Content: ' + String(content || 'ALL CONTENT') +
+          '\n💰 Price: $' + formatTelegramPrice(price) + '\nPlease send me the payment details.';
+      }
       function tgUrlForVideo(v) {
-        var enc = encodeURIComponent('Hello, I\'d like to request access to: ' + v.title + ' ($' + Number(v.price).toFixed(2) + '). Please let me know the next steps.');
+        var enc = encodeURIComponent(telegramInterestMessage(v.title, v.price));
         return tgUser ? 'https://t.me/' + tgUser + '?text=' + enc : 'https://t.me/share/url?url=&text=' + enc;
       }
       function startCheckout(price, maskedName, displayTitle, videoId) {
         var title = displayTitle || pickMaskedName(maskedName) || 'this item';
-        var msg = 'Hello, I\'d like to request access to: ' + title + ' ($' + Number(price || 0).toFixed(2) + ')';
-        if (videoId) msg += ' (Video ID: ' + String(videoId) + ')';
-        msg += '. Please let me know the next steps.';
+        var msg = telegramInterestMessage(title, price);
         var enc = encodeURIComponent(msg);
         var target = (tgUser || TG_ENV || '').replace(/^@/, '').trim();
         var url = target ? 'https://t.me/' + target + '?text=' + enc : 'https://t.me/share/url?url=&text=' + enc;

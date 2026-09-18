@@ -747,10 +747,41 @@
       function buyBtnHtml(price) {
         var p = Number(price) || 0;
         return (
-          '<button type="button" class="btn btn-primary btn-buy js-payopen">' +
-            '<span class="btn-buy-main">Request Access · $' + p.toFixed(2) + '</span>' +
+          '<button type="button" class="btn btn-primary btn-buy btn-card-buy js-payopen">' +
+            '<span class="btn-buy-main"><span class="btn-buy-icon" aria-hidden="true">' + TG_ICON + '</span> BUY NOW $' + p.toFixed(0) + '</span>' +
           '</button>'
         );
+      }
+
+      function cardDiscount(v, price) {
+        var raw = v.discount_percent ?? v.discount ?? v.sale_percent;
+        var discount = Number(raw);
+        if (!Number.isFinite(discount) || discount <= 0) discount = price > 0 ? 50 : 0;
+        discount = Math.max(1, Math.min(90, Math.round(discount)));
+        return discount ? '-' + discount + '%' : '';
+      }
+
+      function cardStock(v) {
+        var raw = v.stock ?? v.available_count ?? v.remaining;
+        if (raw != null && String(raw).trim() !== '') {
+          var n = Number(raw);
+          if (Number.isFinite(n)) return Math.max(0, Math.round(n)) + ' left';
+          return String(raw).trim();
+        }
+        return 'Available';
+      }
+
+      function cardTags(v, isFree) {
+        var raw = v.tags ?? v.features ?? v.categories;
+        var tags = [];
+        if (Array.isArray(raw)) tags = raw;
+        else if (typeof raw === 'string') tags = raw.split(/[,|]/);
+        tags = tags.map(function (tag) { return String(tag || '').trim(); }).filter(Boolean).slice(0, 5);
+        if (!tags.length) {
+          tags = isFree ? ['FREE'] : ['PRO', 'PREMIUM'];
+          if (v.duration) tags.push('HD');
+        }
+        return tags;
       }
 
       function tgUrlForVideo(v, tgUser) {
@@ -929,14 +960,19 @@
           isFree = !!v.is_free;
           var dur = formatDuration(v.duration);
           var previewHref = watchPageUrl(v.id);
-          var svgEye =
-            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-          var svgCal =
-            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>';
-          var metaDate = escapeHtml(formatDateRel(v.created_at)) || '—';
-          var badgeTop = isFree
-            ? '<span class="badge-price">Free</span>'
-            : '<span class="badge-price"><em>$</em>' + price.toFixed(2) + '</span>';
+          var discount = cardDiscount(v, price);
+          var stock = cardStock(v);
+          var purchases = Number(v.purchases ?? v.purchase_count ?? v.sales);
+          if (!Number.isFinite(purchases)) purchases = Number(v.views) || 0;
+          var description = String(v.description || (v.title + ' collection.')).trim();
+          var tags = cardTags(v, isFree);
+          var svgBag =
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 8V7a5 5 0 0 1 10 0v1h3l-1 13H5L4 8h3Zm2 0h6V7a3 3 0 0 0-6 0v1Z"/></svg>';
+          var tagHtml = tags.map(function (tag) {
+            return '<span class="vcard-tag"><span class="vcard-tag-dot" aria-hidden="true"></span>' + escapeHtml(tag) + '</span>';
+          }).join('');
+          var comparePrice = Number(v.original_price ?? v.compare_at_price ?? v.list_price);
+          if (!Number.isFinite(comparePrice) || comparePrice <= price) comparePrice = price > 0 ? price * 2 : 0;
 
           el.innerHTML =
             '<div class="vcard-media">' +
@@ -944,34 +980,31 @@
                 '<div class="skel js-skel"></div>' +
                 '<video class="js-thumb" muted playsinline preload="metadata" aria-hidden="true" style="display:none"></video>' +
                 '<div class="grad-over"></div>' +
-                '<a class="preview-hit" href="' + escapeAttr(previewHref) + '"><div class="play-circ"><div class="play-tri"></div></div><span class="tap-play">Tap to play</span></a>' +
-                badgeTop +
+                '<span class="vcard-media-title">' + escapeHtml(v.title) + '</span>' +
+                '<a class="preview-hit" href="' + escapeAttr(previewHref) + '" aria-label="Preview ' + escapeAttr(v.title) + '"><div class="play-circ"><div class="play-tri"></div></div></a>' +
+                (discount ? '<span class="badge-discount">' + escapeHtml(discount) + '</span>' : '') +
+                '<span class="stock-badge"><span class="stock-dot" aria-hidden="true"></span>' + escapeHtml(stock) + '</span>' +
                 (dur ? '<span class="badge-dur">' + escapeHtml(dur) + '</span>' : '') +
               '</div>' +
             '</div>' +
             '<div class="vcard-body">' +
               '<div class="vcard-title">' + escapeHtml(v.title) + '</div>' +
-              '<div class="vcard-meta">' +
-                '<span class="vcard-meta-item">' + svgEye + formatViews(v.views) + '</span>' +
-                '<span class="vcard-meta-item">' + svgCal + metaDate + '</span>' +
+              '<div class="vcard-meta purchase-meta">' +
+                '<span class="vcard-meta-item">' + svgBag + purchases + ' purchases</span>' +
               '</div>' +
-              '<div class="btn-row">' +
+              '<p class="vcard-description">' + escapeHtml(description) + '</p>' +
+              '<div class="vcard-tags">' + tagHtml + '</div>' +
+              (!isFree
+                ? '<div class="price-row"><span class="price-row-old">$' + comparePrice.toFixed(0) + '</span><span class="price-row-amt">$' + price.toFixed(0) + '</span></div>'
+                : '') +
+              '<div class="btn-row card-actions">' +
+                '<a class="btn btn-card-preview" href="' + escapeAttr(previewHref) + '" onclick="event.stopPropagation()"><span class="btn-play-icon" aria-hidden="true"></span> PREVIEW</a>' +
                 (isFree && v.product_link
-                  ? '<a class="btn btn-primary" href="' + escapeAttr(v.product_link) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">Open</a>'
+                  ? '<a class="btn btn-primary btn-card-buy" href="' + escapeAttr(v.product_link) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">Open</a>'
                   : (!isFree
                     ? buyBtnHtml(price)
-                    : '<button type="button" class="btn js-details">Details</button>')) +
+                    : '<button type="button" class="btn btn-card-buy js-details">Details</button>')) +
               '</div>' +
-              (!isFree
-                ? '<a class="btn-preview-link" href="' + escapeAttr(previewHref) + '" onclick="event.stopPropagation()">Preview free clip</a>'
-                : '') +
-              telegramBtnHtml(tgUrlForVideo(v, tgUser), 'btn-telegram-block') +
-              (!isFree
-                ? '<div class="price-row">' +
-                    '<span class="price-row-label">Price</span>' +
-                    '<span class="price-row-amt">$' + price.toFixed(2) + '<small>USD</small></span>' +
-                  '</div>'
-                : '') +
             '</div>';
 
           el.setAttribute('aria-label', (v.title || 'Catalog item') + (isFree ? ', free' : ', ' + price.toFixed(2) + ' USD'));

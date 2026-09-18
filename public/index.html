@@ -531,6 +531,10 @@
     <div class="promo-banner">
       <div class="promo-title">All content &amp; folders for just $150</div>
       <div class="promo-sub">Everything currently listed on this site. Access after payment confirmation.</div>
+      <div class="promo-countdown" role="timer" aria-live="polite" aria-label="Promotion ends in">
+        <span class="promo-countdown-label">Offer ends in</span>
+        <strong id="promo-countdown">30:00</strong>
+      </div>
       <div class="promo-actions">
         <button type="button" class="promo-btn primary" id="promo-pay">Request Access</button>
         <a class="promo-btn" id="promo-tg" href="#" target="_blank" rel="noopener">Need help?</a>
@@ -812,12 +816,76 @@
         return 'https://t.me/share/url?url=&text=' + enc;
       }
 
+      var PROMO_TIMER_KEY = 'videos-site-promo-expires-at-v1';
+      var PROMO_DURATION_MS = 30 * 60 * 1000;
+      var promoExpiresAt = 0;
+      var promoTimer = null;
+
+      function promoStorageRead() {
+        try {
+          var raw = Number(window.localStorage.getItem(PROMO_TIMER_KEY));
+          return Number.isFinite(raw) && raw > 0 ? raw : 0;
+        } catch (e) {
+          return 0;
+        }
+      }
+
+      function promoStorageWrite(value) {
+        try { window.localStorage.setItem(PROMO_TIMER_KEY, String(value)); } catch (e) {}
+      }
+
+      function formatPromoTime(ms) {
+        var totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+        var minutes = Math.floor(totalSeconds / 60);
+        var seconds = totalSeconds % 60;
+        return String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+      }
+
+      function updatePromoCountdown() {
+        var countdown = document.getElementById('promo-countdown');
+        if (!countdown || !promoExpiresAt) return;
+        var remaining = Math.max(0, promoExpiresAt - Date.now());
+        countdown.textContent = formatPromoTime(remaining);
+        countdown.parentElement.setAttribute('aria-label', remaining ? 'Promotion ends in ' + formatPromoTime(remaining) : 'Promotion ended');
+        if (remaining > 0) return;
+
+        countdown.textContent = '00:00';
+        countdown.parentElement.classList.add('is-expired');
+        var promoPay = document.getElementById('promo-pay');
+        if (promoPay) {
+          promoPay.disabled = true;
+          promoPay.textContent = 'Promotion ended';
+        }
+        if (promoTimer) {
+          clearInterval(promoTimer);
+          promoTimer = null;
+        }
+      }
+
+      function initPromoCountdown() {
+        var stored = promoStorageRead();
+        if (stored) {
+          promoExpiresAt = stored;
+        } else {
+          promoExpiresAt = Date.now() + PROMO_DURATION_MS;
+          promoStorageWrite(promoExpiresAt);
+        }
+        updatePromoCountdown();
+        if (promoExpiresAt > Date.now()) {
+          promoTimer = setInterval(updatePromoCountdown, 1000);
+        }
+      }
+
       function startCheckout(price, maskedName, displayTitle, videoId) {
         var targetUrl = telegramInterestUrl(displayTitle || pickMaskedName(maskedName), price, videoId);
         window.open(targetUrl, '_blank', 'noopener');
       }
 
       function startPromoCheckout() {
+        if (promoExpiresAt && promoExpiresAt <= Date.now()) {
+          updatePromoCountdown();
+          return;
+        }
         var msg = 'Hello, I\'d like to request access to the full collection ($150). Please let me know the next steps.';
         var enc = encodeURIComponent(msg);
         var target = (tgUser || TG_ENV || '').replace(/^@/, '').trim();
@@ -1127,6 +1195,7 @@
           if (tgUser) promoTg.href = tgUrlForPromo(tgUser);
           else { promoTg.href = '#'; promoTg.style.opacity = '0.4'; }
         }
+        initPromoCountdown();
 
         var idsRes = await fetch('/api/video-ids');
         var idsJs = idsRes.ok ? await idsRes.json() : { ids: [] };

@@ -757,11 +757,15 @@
         );
       }
 
-      function cardDiscount(v, price) {
+      function cardDiscountPercent(v, price) {
         var raw = v.discount_percent ?? v.discount ?? v.sale_percent;
         var discount = Number(raw);
-        if (!Number.isFinite(discount) || discount <= 0) discount = price > 0 ? 50 : 0;
-        discount = Math.max(1, Math.min(90, Math.round(discount)));
+        if (!Number.isFinite(discount) || discount <= 0) discount = price > 0 ? 15 : 0;
+        return Math.max(1, Math.min(90, Math.round(discount)));
+      }
+
+      function cardDiscount(v, price) {
+        var discount = cardDiscountPercent(v, price);
         return discount ? '-' + discount + '%' : '';
       }
 
@@ -1035,6 +1039,7 @@
           isFree = !!v.is_free;
           var dur = formatDuration(v.duration);
           var previewHref = watchPageUrl(v.id);
+          var discountPercent = cardDiscountPercent(v, price);
           var discount = cardDiscount(v, price);
           var stock = cardStock(v);
           var purchases = Number(v.purchases ?? v.purchase_count ?? v.sales);
@@ -1047,7 +1052,11 @@
             return '<span class="vcard-tag"><span class="vcard-tag-dot" aria-hidden="true"></span>' + escapeHtml(tag) + '</span>';
           }).join('');
           var comparePrice = Number(v.original_price ?? v.compare_at_price ?? v.list_price);
-          if (!Number.isFinite(comparePrice) || comparePrice <= price) comparePrice = price > 0 ? price * 2 : 0;
+          if (!Number.isFinite(comparePrice) || comparePrice <= price) {
+            comparePrice = price > 0 && discountPercent < 100
+              ? Math.ceil((price / (1 - discountPercent / 100)) / 5) * 5
+              : 0;
+          }
 
           el.innerHTML =
             '<div class="vcard-media">' +
